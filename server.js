@@ -4,86 +4,82 @@ const { ApolloServer, gql } = require('apollo-server-express');
 const app = express();
 
 const typeDefs = gql`
-  type User {
+  type Author {
     id: ID!
     name: String!
-    email: String!
-    posts: [Post]
+    books: [Book]
   }
 
-  type Post {
+  type Book {
     id: ID!
     title: String!
-    content: String!
-    author: User!
-    comments: [Comment]
+    genre: String!
+    author: Author!
+    reviews: [Review]
   }
 
-  type Comment {
+  type Review {
     id: ID!
-    text: String!
-    author: User!
-    post: Post!
+    rating: Int!
+    comment: String
+    book: Book!
   }
 
   type Query {
-    users: [User]
-    posts: [Post]
-    comments: [Comment]
+    authors: [Author]
+    books: [Book]
+    reviews: [Review]
   }
 
   type Mutation {
-    addUser(name: String!, email: String!): User
-    addPost(title: String!, content: String!, authorId: ID!): Post
-    addComment(text: String!, authorId: ID!, postId: ID!): Comment
+    addAuthor(name: String!): Author
+    addBook(title: String!, genre: String!, authorId: ID!): Book
+    addReview(rating: Int!, comment: String, bookId: ID!): Review
   }
 `;
 
-const users = [];
-const posts = [];
-const comments = [];
+const authors = [];
+const books = [];
+const reviews = [];
 
 const resolvers = {
   Query: {
-    users: () => users,
-    posts: () => posts,
-    comments: () => comments,
+    authors: () => authors,
+    books: () => books,
+    reviews: () => reviews,
   },
   Mutation: {
-    addUser: (parent, { name, email }) => {
-      const user = { id: users.length + 1, name, email, posts: [] };
-      users.push(user);
-      return user;
+    addAuthor: (parent, { name }) => {
+      const author = { id: authors.length + 1, name, books: [] };
+      authors.push(author);
+      return author;
     },
-    addPost: (parent, { title, content, authorId }) => {
-      const author = users.find(user => user.id == authorId);
-      if (!author) throw new Error("User not found");
-      const post = { id: posts.length + 1, title, content, author, comments: [] };
-      posts.push(post);
-      author.posts.push(post);
-      return post;
+    addBook: (parent, { title, genre, authorId }) => {
+      const author = authors.find(author => author.id == authorId);
+      if (!author) throw new Error("Author not found");
+      const book = { id: books.length + 1, title, genre, author, reviews: [] };
+      books.push(book);
+      author.books.push(book);
+      return book;
     },
-    addComment: (parent, { text, authorId, postId }) => {
-      const author = users.find(user => user.id == authorId);
-      const post = posts.find(post => post.id == postId);
-      if (!author) throw new Error("User not found");
-      if (!post) throw new Error("Post not found");
-      const comment = { id: comments.length + 1, text, author, post };
-      comments.push(comment);
-      post.comments.push(comment);
-      return comment;
+    addReview: (parent, { rating, comment, bookId }) => {
+      const book = books.find(book => book.id == bookId);
+      if (!book) throw new Error("Book not found");
+      const review = { id: reviews.length + 1, rating, comment, book };
+      reviews.push(review);
+      book.reviews.push(review);
+      return review;
     },
   },
-  User: {
-    posts: (user) => posts.filter(post => post.author.id == user.id),
+  Author: {
+    books: (author) => books.filter(book => book.author.id == author.id),
   },
-  Post: {
-    author: (post) => users.find(user => user.id == post.author.id),
-    comments: (post) => comments.filter(comment => comment.post.id == post.id),
+  Book: {
+    author: (book) => authors.find(author => author.id == book.author.id),
+    reviews: (book) => reviews.filter(review => review.book.id == book.id),
   },
-  Comment: {
-    author: (comment) => users.find(user => user.id == comment.author.id),
-    post: (comment) => posts.find(post => post.id == comment.post.id),
+  Review: {
+    book: (review) => books.find(book => book.id == review.book.id),
   },
 };
 
